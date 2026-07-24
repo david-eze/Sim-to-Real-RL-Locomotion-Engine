@@ -1,0 +1,79 @@
+# ==========================================
+# Python & Virtual Environments
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments & Packages
+.venv/
+venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==========================================
+# Machine Learning & Checkpoints
+# ==========================================
+# TensorBoard logs
+runs/
+tb_logs/
+wandb/
+
+# Large Model Weights (Keep raw checkpoints out of Git)
+*.pt
+*.pth
+*.onnx
+*.bin
+*.safetensors
+*.ckpt
+!pretrained_models/  # (Optional: un-ignore specific tracked demo models if needed)
+
+# Simulation outputs & videos
+*.mp4
+*.gif
+*.pcap
+
+# ==========================================
+# C++ & Build Systems (CMake)
+# ==========================================
+# CMake build directories
+/build/
+/cmake-build-debug/
+/cmake-build-release/
+/out/
+
+# Compiled Object files & Binaries
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+
+# ==========================================
+# IDEs & System Files
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
