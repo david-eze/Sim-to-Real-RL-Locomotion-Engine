@@ -13,20 +13,20 @@ Rather than hand-coding joint trajectories ("move leg A to 30°, then leg B...")
 ![Reinforcement Learning Loop](./assets/reinforcement-learning.jpg)
 
 The setup is the usual RL framing:
-- **Agent** — the policy network controlling the robot
-- **Environment** — a physics simulation with gravity, contact friction, and joint torque limits
-- **Reward** — positive for forward progress and staying upright, negative for falling or wasting energy
+- **Agent**: the policy network controlling the robot
+- **Environment**: a physics simulation with gravity, contact friction, and joint torque limits
+- **Reward**: positive for forward progress and staying upright, negative for falling or wasting energy
 
-Early in training the policy is essentially random noise — the robot just collapses. Over millions of simulated steps (which only takes minutes of wall-clock time, since it's all in simulation) it gradually works out balance and a consistent gait, purely by trying to increase its reward.
+Early in training the policy is essentially random noise, so the robot just collapses. Over millions of simulated steps (which only takes minutes of wall-clock time, since it's all in simulation), it gradually works out balance and a consistent gait, purely by trying to increase its reward.
 
 ---
 
 ## What's actually in this repo
 
-1. **Physics simulation** — MuJoCo is used for gravity, ground contact, and joint torque constraints.
-2. **Policy training** — PPO maps proprioceptive state (joint angles, torso tilt, contact sensors) to continuous motor commands.
-3. **Domain randomization** — floor friction, random push disturbances, and joint friction are varied during training so the policy doesn't overfit to one idealized simulation and fall apart on slightly different conditions.
-4. **Hardware export** — a trained PyTorch policy can be exported to a lightweight C++ implementation intended for real-time execution on an embedded microcontroller.
+1. **Physics simulation**: MuJoCo is used for gravity, ground contact, and joint torque constraints.
+2. **Policy training**: PPO maps proprioceptive state (joint angles, torso tilt, contact sensors) to continuous motor commands.
+3. **Domain randomization**: floor friction, random push disturbances, and joint friction are varied during training so the policy doesn't overfit to one idealized simulation and fall apart on slightly different conditions.
+4. **Hardware export**: a trained PyTorch policy can be exported to a lightweight C++ implementation intended for real-time execution on an embedded microcontroller.
 
 ---
 
@@ -65,13 +65,13 @@ The agent is optimized under a composite reward that trades off forward progress
 $$R_t = w_{\text{fwd}} v_x - w_{\text{ctrl}} \alpha(t) \|a_t\|^2 - w_{\text{smooth}} \alpha(t) \|a_t - a_{t-1}\|^2 - w_{\text{posture}} \theta^2 + r_{\text{alive}} + R_{\text{fall}}$$
 
 Where:
-- $v_x$ — forward velocity (m/s)
-- $\|a_t\|^2$ — energy cost across joint actuators
-- $\|a_t - a_{t-1}\|^2$ — smoothness penalty, discourages high-frequency motor chattering
-- $\theta^2$ — torso pitch penalty, keeps the robot upright
-- $\alpha(t)$ — penalty scaling factor, controlled by the curriculum
-- $r_{\text{alive}}$ — small constant reward per step survived
-- $R_{\text{fall}}$ — terminal penalty ($-100.0$) if torso pitch exceeds 0.8 rad
+- $v_x$: forward velocity (m/s)
+- $\|a_t\|^2$: energy cost across joint actuators
+- $\|a_t - a_{t-1}\|^2$: smoothness penalty, discourages high-frequency motor chattering
+- $\theta^2$: torso pitch penalty, keeps the robot upright
+- $\alpha(t)$: penalty scaling factor, controlled by the curriculum
+- $r_{\text{alive}}$: small constant reward per step survived
+- $R_{\text{fall}}$: terminal penalty ($-100.0$) if torso pitch exceeds 0.8 rad
 
 ---
 
@@ -119,7 +119,7 @@ $$L^{\text{TOTAL}}(\theta, \phi) = -L^{\text{CLIP}}(\theta) + c_1 L^{\text{VF}}(
 
 ## Training results
 
-One run, 1,000,000 timesteps, on CPU only (Intel Core i7-12700H, 16GB RAM) — took about 38 minutes. No GPU used or needed for a task this size.
+One run, 1,000,000 timesteps, on CPU only (Intel Core i7-12700H, 16GB RAM), took about 38 minutes. No GPU used or needed for a task this size.
 
 ### Curriculum progression
 
@@ -148,7 +148,7 @@ Timestep      Mean Return    Entropy   Approx KL   LR
  1,000,000       318.6        3.79      0.008      0.000000
 ```
 
-Entropy trending down and KL staying small and stable across training is roughly what you'd want to see — the policy is converging rather than oscillating or collapsing early.
+Entropy trending down and KL staying small and stable across training is roughly what you'd want to see: the policy is converging rather than oscillating or collapsing early.
 
 ### Evaluation (5 episodes, `evaluate.py`)
 
@@ -166,7 +166,7 @@ AVERAGE    |              |              313.57 |              1.80 m/s |       
 ======================================================================
 ```
 
-(Episode 3 ends a bit early — 1558 steps instead of 1600 — worth a look if you're auditing for edge-case falls, though it still returned a reasonable score.)
+(Episode 3 ends a bit early, 1558 steps instead of 1600, worth a look if you're auditing for edge-case falls, though it still returned a reasonable score.)
 
 ### Key numbers
 
@@ -183,7 +183,7 @@ AVERAGE    |              |              313.57 |              1.80 m/s |       
 | ONNX export | `export_models/policy.onnx` |
 | C++ header export | `export_models/embedded_policy.h` |
 
-A 0% fall rate over 50 episodes is a good sign but shouldn't be read as a guarantee — it reflects the simulated evaluation environment, not real hardware.
+A 0% fall rate over 50 episodes is a good sign but shouldn't be read as a guarantee: it reflects the simulated evaluation environment, not real hardware.
 
 ---
 
@@ -221,8 +221,8 @@ python evaluate.py --model-path ./checkpoints/ppo_biped_final.pt --episodes 5 --
 
 Once training finishes, `train.py` writes two deployment artifacts to `./export_models/`:
 
-1. **`policy.onnx`** — a standard ONNX model, usable with ONNX Runtime or TensorRT on something like a Jetson or a ROS 2 node.
-2. **`embedded_policy.h`** — a self-contained C++ header with the matrix ops and forward pass implemented directly, no external dependencies. Meant to be dropped into firmware on an ARM Cortex, STM32, or ESP32 for low-latency control without needing an ML runtime on the device.
+1. **`policy.onnx`**: a standard ONNX model, usable with ONNX Runtime or TensorRT on something like a Jetson or a ROS 2 node.
+2. **`embedded_policy.h`**: a self-contained C++ header with the matrix ops and forward pass implemented directly, no external dependencies. Meant to be dropped into firmware on an ARM Cortex, STM32, or ESP32 for low-latency control without needing an ML runtime on the device.
 
 ```cpp
 #include "embedded_policy.h"
@@ -237,4 +237,4 @@ void control_loop() {
 }
 ```
 
-Note that sim-to-real transfer is never guaranteed just because domain randomization was used — expect to do some amount of tuning once this runs on actual hardware.
+Note that sim-to-real transfer is never guaranteed just because domain randomization was used, so expect to do some amount of tuning once this runs on actual hardware.
