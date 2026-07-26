@@ -232,15 +232,12 @@ Upon completing training, `train.py` automatically generates two hardware deploy
 ```cpp
 #include "embedded_policy.h"
 
-// Microcontroller real-time control loop
 void control_loop() {
     float robot_state[14] = { /* IMU, joint encoders, foot contacts */ };
     float motor_torques[4];
 
-    // Compute policy action (zero external library dependency)
     compute_robot_action(robot_state, motor_torques);
 
-    // Send PWM / CAN torque commands to joint actuators
     actuate_motors(motor_torques);
 }
 ```
