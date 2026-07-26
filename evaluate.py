@@ -1,5 +1,3 @@
-"""Real-time Evaluation and Diagnostic Renderer for Trained Robotics RL Agent."""
-
 import os
 import time
 import argparse
@@ -12,7 +10,6 @@ from models import ActorCriticPPO
 
 
 def parse_args():
-    """Command line parser for evaluation options."""
     parser = argparse.ArgumentParser(description="Evaluate Trained Robotics Policy")
     parser.add_argument("--model-path", type=str, default="./checkpoints/ppo_biped_final.pt", help="Path to PyTorch checkpoint")
     parser.add_argument("--episodes", type=int, default=3, help="Number of evaluation test episodes")
@@ -21,18 +18,15 @@ def parse_args():
 
 
 def evaluate():
-    """Load a trained checkpoint and display live robot performance telemetry."""
     args = parse_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env_config = EnvConfig()
     ppo_config = PPOConfig()
     
-    # Create physics environment & load neural network policy
     env = BipedalWalkerCustomEnv(config=env_config)
     policy = ActorCriticPPO(state_dim=env_config.state_dim, action_dim=env_config.action_dim, config=ppo_config)
     
-    # Load trained model checkpoint weights if available
     if os.path.exists(args.model_path):
         checkpoint = torch.load(args.model_path, map_location=device)
         if isinstance(checkpoint, dict) and "policy_state_dict" in checkpoint:
@@ -44,20 +38,18 @@ def evaluate():
         print(f"[Evaluate Warning] Checkpoint {args.model_path} not found. Running with un-trained policy for sanity test.")
         
     policy.to(device)
-    policy.eval() # Disable exploration noise for deterministic evaluation
+    policy.eval()
     
     print("\n" + "=" * 70)
     print("        REAL-TIME ROBOTICS POLICY EVALUATION & TELEMETRY")
     print("=" * 70)
     
-    # Run test evaluation episodes
     for ep in range(1, args.episodes + 1):
         state, info = env.reset()
         done = False
         step = 0
         total_reward = 0.0
         
-        # Telemetry tracking arrays
         vel_x_history = []
         hull_angle_history = []
         torque_energy_history = []
@@ -68,7 +60,6 @@ def evaluate():
             step += 1
             state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             
-            # Pass 14 sensors to policy -> Get 4 motor actions
             with torch.no_grad():
                 action, _, _, _ = policy.step(state_tensor)
                 
@@ -79,20 +70,18 @@ def evaluate():
             state = next_state
             total_reward += reward
             
-            # Record step telemetry metrics
             vel_x_history.append(step_info["vel_x"])
             hull_angle_history.append(step_info["hull_angle"])
             torque_energy_history.append(step_info["energy_cost"])
             
             if args.render:
-                time.sleep(0.016)  # Real-time 60 FPS frame delay simulation
+                time.sleep(0.016)
                 
         duration = time.time() - start_time
         avg_vx = float(np.mean(vel_x_history))
         avg_angle = float(np.mean(np.abs(hull_angle_history)))
         avg_energy = float(np.mean(torque_energy_history))
         
-        # Print telemetry stats (Speed, Body tilt, Energy per step, Total score)
         print(f"Episode {ep:2d} | Steps: {step:4d} | Total Return: {total_reward:7.2f} | Avg Speed: {avg_vx:5.2f} m/s | Torso Drift: {avg_angle:5.3f} rad | Energy/Step: {avg_energy:5.3f}")
 
     print("=" * 70 + "\n")
