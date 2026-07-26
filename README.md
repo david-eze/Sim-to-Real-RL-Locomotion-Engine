@@ -38,24 +38,24 @@ At first, the robot flops around completely randomly. But after running millions
 
 ```
 rl_robotics_biped/
-├── config.py                 # Dataclasses for PPO hyperparameters, env, curriculum, and logging
+├── config.py                 
 ├── envs/
 │   ├── __init__.py
-│   ├── bipedal_walker.py     # Custom Gymnasium Continuous Control Bipedal Environment (14D state, 4D action)
-│   └── curriculum.py         # Dynamic Curriculum Learning Manager (scales push force, slope, penalties)
+│   ├── bipedal_walker.py  
+│   └── curriculum.py         
 ├── models/
 │   ├── __init__.py
-│   ├── actor_critic.py       # PyTorch Actor-Critic Networks (LayerNorm + Orthogonal Initialization)
-│   └── ppo.py                # Custom Continuous PPO Engine (GAE, Clipped Surrogate, Value Loss, Entropy)
+│   ├── actor_critic.py      
+│   └── ppo.py               
 ├── utils/
 │   ├── __init__.py
-│   └── logger.py             # Metrics Logger & TensorBoard Integration
+│   └── logger.py            
 ├── export/
 │   ├── __init__.py
-│   └── exporter.py           # Sim-to-Real Exporter (PyTorch -> ONNX & zero-dependency C++ Header)
-├── train.py                  # Main training entry point
-├── evaluate.py               # Telemetry evaluator and real-time renderer script
-└── README.md                 # Complete documentation & mathematical formulation
+│   └── exporter.py           
+├── train.py                  
+├── evaluate.py               
+└── README.md                
 ```
 
 ---
