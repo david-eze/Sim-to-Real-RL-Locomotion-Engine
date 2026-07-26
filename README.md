@@ -1,40 +1,36 @@
-# Continuous Control Reinforcement Learning for Autonomous Robotics
+# Continuous Control RL for Bipedal Locomotion
 
-Production-ready, modular PyTorch & Gymnasium repository implementing continuous control Reinforcement Learning (Proximal Policy Optimization - PPO) with Multi-Objective Reward Function Engineering, Dynamic Curriculum Learning, and a Sim-to-Real Deployment Pipeline (ONNX & C++ Embedded Exporter).
+A modular PyTorch + Gymnasium implementation of PPO for continuous control, built around a bipedal walking task. Includes a multi-objective reward function, a curriculum that gradually ramps up difficulty, and an export path for getting the trained policy onto real hardware (ONNX and a standalone C++ header).
 
-Imagine trying to teach a baby robot how to walk. 
-
-If I were to put a brand-new physical robot on the floor and tell it to figure out how to stand up on its own, it would crash, fall, and smash its expensive metal legs a thousand times. 
-
-That’s where my **Sim-to-Real RL Locomotion Engine** comes in. Instead of breaking real hardware, I built a video-game-like virtual world on my computer to train an AI "brain" inside a physics simulation using trial and error. Once trained, I can upload that optimized brain directly into a physical robot.
+The short version of why this exists: you don't want to teach a real robot to walk by putting it on the floor and letting it fall over a few thousand times. Legs are expensive and slow to replace. So instead, the policy is trained entirely in simulation, where falling costs nothing, and only the finished result gets loaded onto hardware.
 
 ---
 
-## How the AI Thinks: Reinforcement Learning (RL)
+## The approach: reinforcement learning
 
-Instead of hardcoding every single muscle or motor movement (like explicitly writing code to *"move leg A by 30 degrees, then move leg B"*), I used **Reinforcement Learning (RL)**.
+Rather than hand-coding joint trajectories ("move leg A to 30°, then leg B..."), the controller is learned through reinforcement learning.
 
 ![Reinforcement Learning Loop](./assets/reinforcement-learning.jpg)
 
-Think of RL like training a dog with treats:
-* **The Agent:** The robot’s AI brain.
-* **The Environment:** The 3D physics simulator where gravity, friction, and momentum exist.
-* **The Reward System:** I give the AI "points" whenever it takes a step forward without falling, and "penalties" whenever it falls over or consumes too much power.
+The setup is the usual RL framing:
+- **Agent** — the policy network controlling the robot
+- **Environment** — a physics simulation with gravity, contact friction, and joint torque limits
+- **Reward** — positive for forward progress and staying upright, negative for falling or wasting energy
 
-At first, the robot flops around completely randomly. But after running millions of simulated attempts in a matter of seconds, the AI figures out balance, momentum, and smooth movement all on its own to maximize its score.
-
----
-
-## What Does This Project Actually Do?
-
-1. **Simulates the Physics:** I used MuJoCo to closely mimic real-world gravity, ground friction, and joint torque constraints.
-2. **Trains the Neural Network:** I leveraged continuous control algorithms like **PPO** (Proximal Policy Optimization) to map raw sensor telemetry (such as balance tilt and joint angles) into smooth motor commands.
-3. **Applies Domain Randomization:** To ensure the AI doesn't get "lazy" or overfitted to perfect computer conditions, I designed the simulation to randomly change floor slipperiness, apply unpredictable force pushes (virtual wind), and alter joint friction. This prepares the policy for the messy real world.
-4. **Exports to Embedded Hardware:** I built an export pipeline that converts the finished PyTorch policy into optimized C++ code, making it lightweight enough to execute directly on a real-time embedded microcontroller.
+Early in training the policy is essentially random noise — the robot just collapses. Over millions of simulated steps (which only takes minutes of wall-clock time, since it's all in simulation) it gradually works out balance and a consistent gait, purely by trying to increase its reward.
 
 ---
 
-## Project Structure
+## What's actually in this repo
+
+1. **Physics simulation** — MuJoCo is used for gravity, ground contact, and joint torque constraints.
+2. **Policy training** — PPO maps proprioceptive state (joint angles, torso tilt, contact sensors) to continuous motor commands.
+3. **Domain randomization** — floor friction, random push disturbances, and joint friction are varied during training so the policy doesn't overfit to one idealized simulation and fall apart on slightly different conditions.
+4. **Hardware export** — a trained PyTorch policy can be exported to a lightweight C++ implementation intended for real-time execution on an embedded microcontroller.
+
+---
+
+## Project structure
 
 ```
 rl_robotics_biped/
@@ -60,58 +56,58 @@ rl_robotics_biped/
 
 ---
 
-## Mathematical Formulation
+## Math
 
-### 1. Multi-Objective Reward Engineering
+### 1. Reward function
 
-The continuous bipedal control agent is optimized under a multi-objective composite reward function balancing primary forward locomotion against physical efficiency and stability constraints:
+The agent is optimized under a composite reward that trades off forward progress against energy use, smoothness, and posture:
 
 $$R_t = w_{\text{fwd}} v_x - w_{\text{ctrl}} \alpha(t) \|a_t\|^2 - w_{\text{smooth}} \alpha(t) \|a_t - a_{t-1}\|^2 - w_{\text{posture}} \theta^2 + r_{\text{alive}} + R_{\text{fall}}$$
 
 Where:
-- $v_x$: Forward velocity ($m/s$).
-- $\|a_t\|^2$: Energy consumption cost across joint actuators.
-- $\|a_t - a_{t-1}\|^2$: Action smoothness penalty (penalizes high-frequency motor chattering).
-- $\theta^2$: Torso pitch posture penalty (maintains upright orientation).
-- $\alpha(t)$: Dynamic penalty scaling factor managed by the Curriculum Learning pipeline.
-- $r_{\text{alive}}$: Constant positive reward per non-terminal step.
-- $R_{\text{fall}}$: Terminal fall penalty ($-100.0$) if torso angle exceeds pitch threshold ($> 0.8\text{ rad}$).
+- $v_x$ — forward velocity (m/s)
+- $\|a_t\|^2$ — energy cost across joint actuators
+- $\|a_t - a_{t-1}\|^2$ — smoothness penalty, discourages high-frequency motor chattering
+- $\theta^2$ — torso pitch penalty, keeps the robot upright
+- $\alpha(t)$ — penalty scaling factor, controlled by the curriculum
+- $r_{\text{alive}}$ — small constant reward per step survived
+- $R_{\text{fall}}$ — terminal penalty ($-100.0$) if torso pitch exceeds 0.8 rad
 
 ---
 
-### 2. Proximal Policy Optimization (PPO) Continuous Control Engine
+### 2. PPO
 
-#### Clipped Surrogate Policy Objective
-To prevent destructive policy updates while exploring high-dimensional continuous torque spaces, PPO optimizes the clipped surrogate objective:
+#### Clipped surrogate objective
+To keep policy updates from moving too far in one step (which tends to be catastrophic in continuous torque spaces), PPO clips the objective:
 
 $$L^{\text{CLIP}}(\theta) = \hat{\mathbb{E}}_t \left[ \min \left( r_t(\theta) \hat{A}_t, \, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]$$
 
-where the probability ratio is defined as:
+with the probability ratio
 
 $$r_t(\theta) = \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)}$$
 
 #### Generalized Advantage Estimation
-Advantages are estimated recursively using GAE to balance bias and variance:
+Advantages are estimated recursively (bias/variance tradeoff controlled by $\lambda$):
 
 $$\delta_t^V = r_t + \gamma V_\phi(s_{t+1}) (1 - d_t) - V_\phi(s_t)$$
 
 $$\hat{A}_t = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}^V$$
 
-#### Value Function Loss with Value Clipping
-The Critic state-value function $V_\phi(s)$ is trained via mean squared error over Monte-Carlo return targets $R_t = \hat{A}_t + V_\phi(s_t)$:
+#### Value loss (with clipping)
+The critic is trained on Monte Carlo return targets $R_t = \hat{A}_t + V_\phi(s_t)$:
 
 $$L^{\text{VF}}(\phi) = \frac{1}{2} \hat{\mathbb{E}}_t \left[ \max \left( (V_\phi(s_t) - R_t)^2, \, (V_{\text{clip}}(s_t) - R_t)^2 \right) \right]$$
 
-#### Entropy Regularization & Total Loss
-An entropy bonus encourages policy exploration over continuous action distributions:
+#### Entropy bonus and total loss
+An entropy term keeps exploration alive over the continuous action space:
 
 $$L^{\text{TOTAL}}(\theta, \phi) = -L^{\text{CLIP}}(\theta) + c_1 L^{\text{VF}}(\phi) - c_2 S[\pi_\theta]$$
 
 ---
 
-## 3. Dynamic Curriculum Learning
+## 3. Curriculum learning
 
-The `CurriculumManager` dynamically modifies environment physics based on policy return performance:
+`CurriculumManager` adjusts environment difficulty based on the policy's running return, rather than training on the hardest setting from step one:
 
 | Stage | Name | Target Return | Push Disturbance ($\sigma$) | Slope | Penalty Scale $\alpha(t)$ |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -121,20 +117,19 @@ The `CurriculumManager` dynamically modifies environment physics based on policy
 
 ---
 
-## Training Results
+## Training results
 
-> Full training run: **1,000,000 timesteps** on CPU over **~38 minutes**.
-> Hardware: Intel Core i7-12700H, 16GB RAM. No GPU required.
+One run, 1,000,000 timesteps, on CPU only (Intel Core i7-12700H, 16GB RAM) — took about 38 minutes. No GPU used or needed for a task this size.
 
-### Curriculum Progression
+### Curriculum progression
 
 | Milestone | Timestep | Mean Return | Notes |
 |:---|---:|---:|:---|
-| Stage 0 → Stage 1 promoted | ~82,000 | **153.4** | Cleared flat ground threshold |
-| Stage 1 → Stage 2 promoted | ~341,000 | **237.8** | Mastered bumpy terrain + wind |
-| Peak Return (Final Policy) | ~950,000 | **318.6** | Robust locomotion on 5° slope |
+| Stage 0 → Stage 1 | ~82,000 | 153.4 | Cleared flat-ground threshold |
+| Stage 1 → Stage 2 | ~341,000 | 237.8 | Handling bumpy terrain + pushes |
+| Final policy | ~950,000 | 318.6 | Stable on 5° slope with disturbances |
 
-### Episode Return Over Training
+### Return over training
 
 ```
 Timestep      Mean Return    Entropy   Approx KL   LR
@@ -153,7 +148,9 @@ Timestep      Mean Return    Entropy   Approx KL   LR
  1,000,000       318.6        3.79      0.008      0.000000
 ```
 
-### Final Policy Evaluation (5 Episodes — `evaluate.py`)
+Entropy trending down and KL staying small and stable across training is roughly what you'd want to see — the policy is converging rather than oscillating or collapsing early.
+
+### Evaluation (5 episodes, `evaluate.py`)
 
 ```
 ======================================================================
@@ -169,52 +166,50 @@ AVERAGE    |              |              313.57 |              1.80 m/s |       
 ======================================================================
 ```
 
-### Key Performance Metrics
+(Episode 3 ends a bit early — 1558 steps instead of 1600 — worth a look if you're auditing for edge-case falls, though it still returned a reasonable score.)
+
+### Key numbers
 
 | Metric | Value |
 |:---|---:|
-| **Final Mean Return** | 318.6 |
-| **Average Walking Speed** | 1.80 m/s |
-| **Average Torso Drift** | 0.023 rad (~1.3°) |
-| **Average Energy Per Step** | 0.857 (very efficient) |
-| **Fall Rate (final policy)** | 0% across 50 eval episodes |
-| **Training Throughput** | ~441 steps/second (CPU) |
-| **Total Training Time** | 38 min 12 sec |
-| **Curriculum Stages Completed** | 3 / 3 |
-| **Policy Export (ONNX)** | ✅ `export_models/policy.onnx` |
-| **Policy Export (C++ Header)** | ✅ `export_models/embedded_policy.h` |
+| Final mean return | 318.6 |
+| Average walking speed | 1.80 m/s |
+| Average torso drift | 0.023 rad (~1.3°) |
+| Average energy per step | 0.857 |
+| Fall rate, final policy (50 eval episodes) | 0% |
+| Training throughput | ~441 steps/sec on CPU |
+| Total training time | 38 min 12 sec |
+| Curriculum stages completed | 3 / 3 |
+| ONNX export | `export_models/policy.onnx` |
+| C++ header export | `export_models/embedded_policy.h` |
+
+A 0% fall rate over 50 episodes is a good sign but shouldn't be read as a guarantee — it reflects the simulated evaluation environment, not real hardware.
 
 ---
 
-## Quickstart & Execution
+## Running it
 
-### 1. Installation
-
-Make sure PyTorch and Gymnasium are installed in your Python environment:
+### 1. Install
 
 ```bash
 pip install torch numpy gymnasium tensorboard
 ```
 
-### 2. Training the Agent
-
-Launch PPO training with curriculum learning:
+### 2. Train
 
 ```bash
 python train.py --timesteps 100000 --seed 42
 ```
 
-### 3. Monitoring Training via TensorBoard
+### 3. Watch training in TensorBoard
 
-Launch TensorBoard to visualize reward convergence, policy entropy, value loss, and approximate KL divergence:
+Reward, entropy, value loss, and approximate KL are all logged:
 
 ```bash
 tensorboard --logdir ./logs/tb_logs
 ```
 
-### 4. Evaluating Policy & Real-Time Telemetry
-
-Run evaluation rollouts on a saved checkpoint:
+### 4. Evaluate a checkpoint
 
 ```bash
 python evaluate.py --model-path ./checkpoints/ppo_biped_final.pt --episodes 5 --render
@@ -222,12 +217,12 @@ python evaluate.py --model-path ./checkpoints/ppo_biped_final.pt --episodes 5 --
 
 ---
 
-## Sim-to-Real Embedded Hardware Deployment
+## Getting the policy onto hardware
 
-Upon completing training, `train.py` automatically generates two hardware deployment artifacts under `./export_models/`:
+Once training finishes, `train.py` writes two deployment artifacts to `./export_models/`:
 
-1. **`policy.onnx`**: Standard ONNX model for deployment on ROS 2, NVIDIA Jetson, or PC nodes using ONNX Runtime or TensorRT.
-2. **`embedded_policy.h`**: Standalone, zero-dependency C++ header file containing matrix operations and forward pass logic. Can be directly included in ARM Cortex / STM32 / ESP32 microcontroller firmwares for ultra-low-latency bare-metal motor control.
+1. **`policy.onnx`** — a standard ONNX model, usable with ONNX Runtime or TensorRT on something like a Jetson or a ROS 2 node.
+2. **`embedded_policy.h`** — a self-contained C++ header with the matrix ops and forward pass implemented directly, no external dependencies. Meant to be dropped into firmware on an ARM Cortex, STM32, or ESP32 for low-latency control without needing an ML runtime on the device.
 
 ```cpp
 #include "embedded_policy.h"
@@ -241,3 +236,5 @@ void control_loop() {
     actuate_motors(motor_torques);
 }
 ```
+
+Note that sim-to-real transfer is never guaranteed just because domain randomization was used — expect to do some amount of tuning once this runs on actual hardware.
