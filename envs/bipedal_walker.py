@@ -1,5 +1,3 @@
-"""Custom Continuous Control Bipedal Walker Gymnasium Environment."""
-
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -9,10 +7,6 @@ from config import EnvConfig
 
 
 class BipedalWalkerCustomEnv(gym.Env):
-    """
-    Continuous control bipedal robotics environment.
-    Simulates a 2D robot with a body (torso) and 2 legs with hip and knee joints.
-    """
     
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 60}
     
@@ -46,7 +40,6 @@ class BipedalWalkerCustomEnv(gym.Env):
         seed: Optional[int] = None,
         options: Optional[Dict[str, Any]] = None
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """Reset the robot back to a standing posture to start a new game."""
         super().reset(seed=seed)
         
         hull_angle = np.random.uniform(-0.02, 0.02)     
@@ -155,13 +148,7 @@ class BipedalWalkerCustomEnv(gym.Env):
         return self._state.copy(), reward, terminated, truncated, info
 
     def _compute_reward(self, action: np.ndarray, terminated: bool) -> float:
-        """
-        Calculate points (reward) for the AI:
-        + Points for moving forward fast
-        - Penalty for wasting energy or shaking legs
-        - Penalty for tilting sideways
-        - Big -100 penalty if robot falls over
-        """
+
         if terminated:
             return float(self.config.fall_penalty) 
             
@@ -184,7 +171,6 @@ class BipedalWalkerCustomEnv(gym.Env):
         slope_angle_deg: float,
         penalty_scaler: float
     ) -> None:
-        """Update floor roughness and wind force when the AI levels up."""
         self.push_force_std = push_force_std
         self.terrain_roughness = terrain_roughness
         self.slope_angle_rad = np.radians(slope_angle_deg)
