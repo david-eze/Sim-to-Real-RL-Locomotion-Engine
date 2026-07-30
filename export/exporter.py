@@ -47,11 +47,6 @@ class PolicyExporter:
         return output_path
 
     def export_cpp_header(self, output_path: str = "./export_models/embedded_policy.h") -> str:
-        """Write a compact header containing the actor's affine layers.
-
-        The generated header is dependency-free and mirrors Linear, LayerNorm,
-        and Tanh layers in the actor mean network.
-        """
         layers = list(self.actor.backbone) + [self.actor.mu_layer]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
