@@ -1,4 +1,3 @@
-from envs.bipedal_walker import BipedalWalkerCustomEnv  
-from envs.curriculum import CurriculumManager         
+from utils.logger import MetricsLogger
 
-__all__ = ["BipedalWalkerCustomEnv", "CurriculumManager"]
+__all__ = ["MetricsLogger"]
