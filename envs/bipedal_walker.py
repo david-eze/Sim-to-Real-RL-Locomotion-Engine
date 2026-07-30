@@ -81,6 +81,7 @@ class BipedalWalkerCustomEnv(gym.Env):
         """Run 1 physics step (1/60th of a second) using motor commands from the AI."""
         self.step_count += 1
         action = np.clip(action, self.config.action_bounds[0], self.config.action_bounds[1])
+        action_delta = action - self.prev_action
         
         dt = self.config.time_step  
         
@@ -133,7 +134,7 @@ class BipedalWalkerCustomEnv(gym.Env):
             
         truncated = self.step_count >= self.config.max_episode_steps
         
-        reward = self._compute_reward(action, terminated)
+        reward = self._compute_reward(action, terminated, action_delta)
         
         self.prev_action = action.copy()
         
@@ -141,13 +142,13 @@ class BipedalWalkerCustomEnv(gym.Env):
             "vel_x": float(vel_x),
             "hull_angle": float(hull_angle),
             "energy_cost": float(np.sum(np.square(action))),
-            "smoothness_cost": float(np.sum(np.square(action - self.prev_action))),
+            "smoothness_cost": float(np.sum(np.square(action_delta))),
             "terminated": terminated
         }
         
         return self._state.copy(), reward, terminated, truncated, info
 
-    def _compute_reward(self, action: np.ndarray, terminated: bool) -> float:
+    def _compute_reward(self, action: np.ndarray, terminated: bool, action_delta: np.ndarray) -> float:
 
         if terminated:
             return float(self.config.fall_penalty) 
@@ -158,7 +159,7 @@ class BipedalWalkerCustomEnv(gym.Env):
         r_fwd = self.config.w_forward * vel_x
         
         ctrl_cost = self.config.w_ctrl_cost * float(np.sum(np.square(action))) * self.penalty_scaler
-        smoothness_cost = self.config.w_smoothness * float(np.sum(np.square(action - self.prev_action))) * self.penalty_scaler
+        smoothness_cost = self.config.w_smoothness * float(np.sum(np.square(action_delta))) * self.penalty_scaler
         posture_cost = self.config.w_posture * float(hull_angle ** 2)
         
         reward = r_fwd - ctrl_cost - smoothness_cost - posture_cost + self.config.r_alive
