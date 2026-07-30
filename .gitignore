@@ -47,6 +47,7 @@ wandb/
 # Simulation outputs & videos
 *.mp4
 *.gif
+!assets/*.gif
 *.pcap
 
 # ==========================================
