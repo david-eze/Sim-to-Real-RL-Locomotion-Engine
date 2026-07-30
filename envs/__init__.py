@@ -1,3 +1,4 @@
-from export.exporter import PolicyExporter
+from envs.bipedal_walker import BipedalWalkerCustomEnv
+from envs.curriculum import CurriculumManager
 
-__all__ = ["PolicyExporter"]
+__all__ = ["BipedalWalkerCustomEnv", "CurriculumManager"]
