@@ -78,7 +78,6 @@ class BipedalWalkerCustomEnv(gym.Env):
         return self._state.copy(), info
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
-        """Run 1 physics step (1/60th of a second) using motor commands from the AI."""
         self.step_count += 1
         action = np.clip(action, self.config.action_bounds[0], self.config.action_bounds[1])
         action_delta = action - self.prev_action
