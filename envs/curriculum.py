@@ -31,7 +31,6 @@ class CurriculumManager:
         )
 
     def set_stage(self, stage_idx: int) -> None:
-        """Select a curriculum stage explicitly for evaluation or visualization."""
         if not 0 <= stage_idx < len(self.stages):
             raise ValueError(f"stage_idx must be in [0, {len(self.stages) - 1}], got {stage_idx}")
         self.current_stage_idx = stage_idx
