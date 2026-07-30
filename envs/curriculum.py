@@ -30,6 +30,12 @@ class CurriculumManager:
             f"(PushStd: {stage.push_force_std}, Roughness: {stage.terrain_roughness}, Slope: {stage.slope_angle_deg}°)"
         )
 
+    def set_stage(self, stage_idx: int) -> None:
+        """Select a curriculum stage explicitly for evaluation or visualization."""
+        if not 0 <= stage_idx < len(self.stages):
+            raise ValueError(f"stage_idx must be in [0, {len(self.stages) - 1}], got {stage_idx}")
+        self.current_stage_idx = stage_idx
+
     def update_curriculum(self, mean_episodic_return: float, env: BipedalWalkerCustomEnv) -> bool:
         if self.current_stage_idx >= len(self.stages) - 1:
             return False
@@ -46,3 +52,4 @@ class CurriculumManager:
             return True
 
         return False
+
