@@ -23,8 +23,8 @@ Baseline controller vs PPO across the disturbance curriculum:
 | Metric | Baseline Controller | PPO-Trained Policy | Improvement |
 | --- | --- | --- | --- |
 | **Walking success rate** (Stage 0 → Stage 2) | 78% → 42% | 92% → 81% | +14% → +39% absolute |
-| **Forward velocity** (m/s, avg) | 0.85 ± 0.12 | 1.02 ± 0.08 | +20% faster, 33% more consistent |
-| **Energy consumption** (J/step) | 24.3 ± 3.1 | 21.7 ± 2.4 | -11% more efficient |
+| **Forward velocity** (m/s, avg) | 0.85 ± 0.12 | 1.02 ± 0.08 | +20% faster; 33% lower velocity standard deviation |
+| **Energy consumption** (J/step) | 24.3 ± 3.1 | 21.7 ± 2.4 | 10.7% lower energy consumption |
 | **Recovery rate after disturbances** | 0.61 | 0.84 | +38% better recovery |
 | **Inference latency** (CPU, ms) | 0.02 (analytic) | 0.15 (forward pass) | +7.5× but still <1ms |
 | **Model size** | — | 124 KB (ONNX) | — |
